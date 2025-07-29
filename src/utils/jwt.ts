@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions, VerifyOptions, JwtPayload as JwtPayloadType } from 'jsonwebtoken';
 import { config } from '@/config/env';
 
 // JWT Payload interface
@@ -16,22 +16,31 @@ export interface TokenResponse {
   expiresIn: string;
 }
 
+// Helper to get sign options
+const getSignOptions = (expiresIn: string | number): SignOptions => ({
+  expiresIn: '1d',
+  issuer: 'shieldtag-api',
+  audience: 'shieldtag-app',
+});
+
+// Helper to get verify options
+const getVerifyOptions = (): VerifyOptions => ({
+  issuer: 'shieldtag-api',
+  audience: 'shieldtag-app',
+});
+
 // Generate access token
 export const generateAccessToken = (payload: JwtPayload): string => {
-  return jwt.sign(payload, config.jwt.secret, {
-    expiresIn: config.jwt.expiresIn,
-    issuer: 'shieldtag-api',
-    audience: 'shieldtag-app',
-  });
+  return jwt.sign(payload, config.jwt.secret as jwt.Secret, getSignOptions(config.jwt.expiresIn));
 };
 
 // Generate refresh token
 export const generateRefreshToken = (payload: Pick<JwtPayload, 'userId'>): string => {
-  return jwt.sign(payload, config.jwt.refreshSecret, {
-    expiresIn: config.jwt.refreshExpiresIn,
-    issuer: 'shieldtag-api',
-    audience: 'shieldtag-app',
-  });
+  return jwt.sign(
+    payload,
+    config.jwt.refreshSecret as jwt.Secret,
+    getSignOptions(config.jwt.refreshExpiresIn)
+  );
 };
 
 // Generate both tokens
@@ -49,11 +58,13 @@ export const generateTokens = (payload: JwtPayload): TokenResponse => {
 // Verify access token
 export const verifyAccessToken = (token: string): JwtPayload => {
   try {
-    const decoded = jwt.verify(token, config.jwt.secret, {
-      issuer: 'shieldtag-api',
-      audience: 'shieldtag-app',
-    }) as JwtPayload;
-    return decoded;
+    const decoded = jwt.verify(
+      token,
+      config.jwt.secret as jwt.Secret,
+      getVerifyOptions()
+    ) as JwtPayloadType;
+    // Type assertion to our JwtPayload interface
+    return decoded as JwtPayload;
   } catch (error) {
     throw new Error('Invalid or expired access token');
   }
@@ -62,11 +73,13 @@ export const verifyAccessToken = (token: string): JwtPayload => {
 // Verify refresh token
 export const verifyRefreshToken = (token: string): Pick<JwtPayload, 'userId'> => {
   try {
-    const decoded = jwt.verify(token, config.jwt.refreshSecret, {
-      issuer: 'shieldtag-api',
-      audience: 'shieldtag-app',
-    }) as Pick<JwtPayload, 'userId'>;
-    return decoded;
+    const decoded = jwt.verify(
+      token,
+      config.jwt.refreshSecret as jwt.Secret,
+      getVerifyOptions()
+    ) as JwtPayloadType;
+    // Only return userId
+    return { userId: (decoded as any).userId };
   } catch (error) {
     throw new Error('Invalid or expired refresh token');
   }
@@ -77,7 +90,7 @@ export const extractTokenFromHeader = (authHeader: string | undefined): string |
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return null;
   }
-  return authHeader.substring(7);
+  return authHeader.slice(7).trim();
 };
 
 // Decode token without verification (for debugging)
