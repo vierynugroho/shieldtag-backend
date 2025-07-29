@@ -80,7 +80,7 @@ export const validationErrorResponse = (
   res: Response,
   errors: any[],
   message: string = 'Validation failed'
-): Response<ApiResponse<any[]>> => {
+): Response<ApiResponse<null>> => {
   return errorResponse(res, message, 422, errors);
 };
 
