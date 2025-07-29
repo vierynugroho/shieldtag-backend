@@ -34,7 +34,6 @@ export class AuthService {
           email: userData.email,
           password: hashedPassword,
           role: userData.role!,
-          permissions: this.getDefaultPermissions(userData.role!),
         })
         .returning();
 

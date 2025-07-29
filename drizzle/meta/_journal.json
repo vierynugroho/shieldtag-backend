@@ -8,6 +8,13 @@
       "when": 1753770481732,
       "tag": "0000_natural_white_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1753773298537,
+      "tag": "0001_orange_red_hulk",
+      "breakpoints": true
     }
   ]
 }

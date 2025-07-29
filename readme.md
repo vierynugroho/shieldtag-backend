@@ -1,5 +1,12 @@
 Berikut adalah `README.md` **lengkap dan disesuaikan** berdasarkan script `package.json` milikmu, termasuk setup `pnpm`, `drizzle-kit`, dan perintah untuk linting, formatting, dan build:
 
+# API Documentation
+
+## Dokumentasi Postman
+
+Kamu dapat mengakses koleksi API Postman di sini:  
+[https://documenter.getpostman.com/view/22814931/2sB3B7PuL7](https://documenter.getpostman.com/view/22814931/2sB3B7PuL7)
+
 ---
 
 ````markdown
