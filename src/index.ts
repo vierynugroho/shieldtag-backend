@@ -61,8 +61,7 @@ if (config.server.isDevelopment) {
   );
 }
 
-// Rate limiting
-const apiLimiter = rateLimit({
+rateLimit({
   windowMs: config.rateLimit.windowMs,
   max: config.rateLimit.max,
   message: {
@@ -151,7 +150,6 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
-// Mulai server
 const server = app.listen(config.server.port, config.server.host, () => {
   logger.info(`🚀 Server berjalan di http://${config.server.host}:${config.server.port}`, {
     environment: config.server.env,

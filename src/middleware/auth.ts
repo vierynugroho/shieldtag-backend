@@ -14,7 +14,6 @@ declare global {
 // Authentication middleware
 export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Extract token from Authorization header
     const token = extractTokenFromHeader(req.headers.authorization);
 
     if (!token) {
@@ -26,16 +25,14 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
       return unauthorizedResponse(res, 'Access token is required');
     }
 
-    // Verify token
     const decoded = verifyAccessToken(token);
 
-    // Add user data to request
     req.user = decoded;
 
     logger.info('User authenticated successfully', {
       userId: decoded.userId,
       email: decoded.email,
-      role: decoded.role,
+      roleId: decoded.roleId,
       path: req.path,
     });
 
@@ -80,10 +77,10 @@ export const authorize = (...roles: string[]) => {
       return unauthorizedResponse(res, 'Authentication required');
     }
 
-    if (!roles.includes(req.user.role)) {
+    if (!roles.includes(req.user.roleId)) {
       logger.warn('Insufficient permissions', {
         userId: req.user.userId,
-        userRole: req.user.role,
+        userRoleId: req.user.roleId,
         requiredRoles: roles,
         path: req.path,
       });

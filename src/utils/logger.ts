@@ -5,9 +5,16 @@ import { config } from '@/config/env';
 const logFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   winston.format.errors({ stack: true }),
-  winston.format.json(),
-  winston.format.printf(({ timestamp, level, message, stack }) => {
-    return `${timestamp} [${level.toUpperCase()}]: ${message}${stack ? `\n${stack}` : ''}`;
+  winston.format.printf(({ timestamp, level, message, stack, ...meta }) => {
+    let log = `${timestamp} [${level.toUpperCase()}]: ${message}`;
+    if (stack) {
+      log += `\n${stack}`;
+    }
+    const metaKeys = Object.keys(meta);
+    if (metaKeys.length > 0) {
+      log += `\nMeta: ${JSON.stringify(meta, null, 2)}`;
+    }
+    return log;
   })
 );
 
@@ -18,10 +25,7 @@ const logger = winston.createLogger({
   transports: [
     // Console transport
     new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
-      ),
+      format: winston.format.combine(winston.format.colorize(), winston.format.simple()),
     }),
 
     // File transport for errors
@@ -39,12 +43,8 @@ const logger = winston.createLogger({
       maxFiles: config.logging.fileMaxFiles,
     }),
   ],
-  exceptionHandlers: [
-    new winston.transports.File({ filename: 'logs/exceptions.log' }),
-  ],
-  rejectionHandlers: [
-    new winston.transports.File({ filename: 'logs/rejections.log' }),
-  ],
+  exceptionHandlers: [new winston.transports.File({ filename: 'logs/exceptions.log' })],
+  rejectionHandlers: [new winston.transports.File({ filename: 'logs/rejections.log' })],
 });
 
 // Add debug transport in development

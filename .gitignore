@@ -76,3 +76,5 @@ Dockerfile*
 
 # Testing
 .nyc_output/
+
+/src/generated/prisma

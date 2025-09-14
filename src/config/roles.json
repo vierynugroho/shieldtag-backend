@@ -1,0 +1,60 @@
+{
+  "roles": [
+    {
+      "name": "superadmin",
+      "permissions": [
+        "user:create",
+        "user:read",
+        "user:update",
+        "user:delete",
+
+        "finance:create",
+        "finance:read",
+        "finance:update",
+        "finance:delete",
+
+        "customer:create",
+        "customer:read",
+        "customer:update",
+        "customer:delete",
+
+        "admin:create",
+        "admin:read",
+        "admin:update",
+        "admin:delete"
+      ]
+    },
+    {
+      "name": "admin",
+      "permissions": [
+        "user:create",
+        "user:read",
+        "user:update",
+        "user:delete",
+
+        "finance:read",
+        "finance:update",
+
+        "customer:create",
+        "customer:read",
+        "customer:update",
+        "customer:delete"
+      ]
+    },
+    {
+      "name": "finance",
+      "permissions": [
+        "finance:create",
+        "finance:read",
+        "finance:update",
+        "finance:delete",
+
+        "customer:read"
+      ]
+    },
+    {
+      "name": "customer",
+      "permissions": ["customer:read", "customer:update"]
+    }
+  ]
+}

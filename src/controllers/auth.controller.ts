@@ -77,13 +77,4 @@ export class AuthController {
       return errorResponse(res, message, 500);
     }
   }
-
-  static async refreshToken(req: Request, res: Response) {
-    try {
-      return errorResponse(res, 'Refresh token endpoint not implemented yet', 501);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Token refresh failed';
-      return errorResponse(res, message, 500);
-    }
-  }
 }

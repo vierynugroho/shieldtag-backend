@@ -1,15 +1,29 @@
-import { LoginInput, RegisterInput, User, UserResponse, AuthResponse } from '@/types/user';
+import {
+  LoginInput,
+  RegisterInput,
+  User,
+  UserResponse,
+  AuthResponse,
+  UserRole,
+} from '@/types/user';
 import { PasswordUtils } from '@/utils/password';
 import { generateTokens } from '@/utils/jwt';
 import logger from '@/utils/logger';
-import { UserRepository } from '@/repositories/user.repository';
-import { AuthRepository } from '@/repositories/auth.repository';
-import { RoleName } from '@/generated/prisma';
+import prisma from '@/db';
+import { Role } from '@/generated/prisma';
+
+function castRoleToUserRole(role: string): UserRole {
+  return role as UserRole;
+}
 
 export class AuthService {
   static async register(userData: RegisterInput): Promise<AuthResponse> {
     try {
-      const existing = await UserRepository.findByEmail(userData.email);
+      const existing = await prisma.user.findFirst({
+        where: {
+          email: userData.email,
+        },
+      });
 
       if (existing) {
         throw new Error('User with this email already exists');
@@ -17,25 +31,25 @@ export class AuthService {
 
       const hashedPassword = await PasswordUtils.hash(userData.password);
 
-      const newUserData = await AuthRepository.register(
-        userData.email,
-        userData.name,
-        hashedPassword,
-        userData.role_id
-      );
+      const newUserRaw = await prisma.user.create({
+        data: {
+          email: userData.email,
+          name: userData.email,
+          role: userData.role as Role,
+          password: hashedPassword,
+        },
+      });
 
       const newUser: User = {
-        ...newUserData,
-        role: {
-          id: newUserData.roleId,
-          name: (newUserData as any).Role?.name || '',
-        },
+        ...newUserRaw,
+        role: castRoleToUserRole(newUserRaw.role),
       };
 
       const tokens = generateTokens({
-        userId: String(newUser.id),
+        userId: newUser.id,
         email: newUser.email,
-        roleId: newUser.role.name as RoleName,
+        role: newUser.role,
+        // permissions: newUser.permissions, // if used RBAC
       });
 
       const userResponse = this.sanitizeUser(newUser);
@@ -43,7 +57,7 @@ export class AuthService {
       logger.info('User registered successfully', {
         userId: newUser.id,
         email: newUser.email,
-        roleId: newUser.role.id,
+        role: newUser.role,
       });
 
       return {
@@ -62,31 +76,31 @@ export class AuthService {
 
   static async login(credentials: LoginInput): Promise<AuthResponse> {
     try {
-      const userData = await UserRepository.findByEmail(credentials.email);
-
-      if (!userData) {
+      // Cari user berdasarkan email
+      const found = await prisma.user.findMany({
+        where: { email: credentials.email },
+      });
+      const userRaw = found[0];
+      if (!userRaw) {
         throw new Error('Invalid email or password');
       }
 
-      const isPasswordValid = await PasswordUtils.compare(credentials.password, userData.password!);
+      const isPasswordValid = await PasswordUtils.compare(credentials.password, userRaw.password!);
       if (!isPasswordValid) {
         throw new Error('Invalid email or password');
       }
 
+      // Convert role from string to UserRole
       const user: User = {
-        id: userData.id,
-        email: userData.email,
-        name: userData.name,
-        role: {
-          id: userData.roleId,
-          name: (userData as any).Role?.name || '',
-        },
+        ...userRaw,
+        role: castRoleToUserRole(userRaw.role),
       };
 
       const tokens = generateTokens({
         userId: user.id,
         email: user.email,
-        roleId: user.role.id,
+        role: user.role,
+        permissions: user.permissions,
       });
 
       const userResponse = this.sanitizeUser(user);
@@ -94,7 +108,7 @@ export class AuthService {
       logger.info('User logged in successfully', {
         userId: user.id,
         email: user.email,
-        role: user.role.name,
+        role: user.role,
       });
 
       return {
@@ -113,20 +127,18 @@ export class AuthService {
 
   static async getUserById(userId: string): Promise<UserResponse | null> {
     try {
-      const userData = await UserRepository.findByUserId(userId);
+      const userRaw = await prisma.user.findUnique({
+        where: { id: userId },
+      });
 
-      if (!userData) {
+      if (!userRaw) {
         return null;
       }
 
+      // Convert role from string to UserRole
       const user: User = {
-        id: userData.id,
-        email: userData.email,
-        name: userData.name,
-        role: {
-          id: userData.roleId,
-          name: (userData as any).Role?.name || '',
-        },
+        ...userRaw,
+        role: castRoleToUserRole(userRaw.role),
       };
 
       return this.sanitizeUser(user);
@@ -141,22 +153,18 @@ export class AuthService {
 
   static async getUserProfile(userId: string): Promise<UserResponse> {
     try {
-      const userData = await UserRepository.findByUserId(userId);
+      const userRaw = await prisma.user.findUnique({
+        where: { id: userId },
+      });
 
-      if (!userData) {
+      if (!userRaw) {
         throw new Error('User not found');
       }
-
+      // Convert role from string to UserRole
       const user: User = {
-        id: userData.id,
-        email: userData.email,
-        name: userData.name,
-        role: {
-          id: userData.roleId,
-          name: (userData as any).Role?.name || '',
-        },
+        ...userRaw,
+        role: castRoleToUserRole(userRaw.role),
       };
-
       return this.sanitizeUser(user);
     } catch (error) {
       logger.error('Failed to get user profile', {
@@ -170,5 +178,17 @@ export class AuthService {
   private static sanitizeUser(user: User): UserResponse {
     const { password, ...userWithoutPassword } = user;
     return userWithoutPassword;
+  }
+
+  private static getDefaultPermissions(role: string): string[] {
+    switch (role) {
+      case 'ADMIN':
+        return ['*'];
+      case 'MANAGER':
+        return ['read', 'write', 'update'];
+      case 'USER':
+      default:
+        return ['read'];
+    }
   }
 }
